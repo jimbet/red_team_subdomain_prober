@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sir Jimbet - Red Team Scan Results Viewer</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --bg-card: #ffffff;
+            --text-primary: #000000;
+            --text-secondary: #666666;
+            --border-color: #ddd;
+            --accent-color: #2196F3;
+            --success-color: #4CAF50;
+            --error-color: #f44336;
+            --warning-color: #ff9800;
+            --code-bg: #f4f4f4;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --bg-card: #242424;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --border-color: #404040;
+            --accent-color: #64B5F6;
+            --success-color: #81C784;
+            --error-color: #E57373;
+            --warning-color: #FFB74D;
+            --code-bg: #2d2d2d;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: all 0.3s ease;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: var(--bg-card);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        h1 {
+            color: var(--accent-color);
+            font-size: 28px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        .theme-toggle {
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.3s;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px var(--shadow);
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--accent-color);
+        }
+
+        .section {
+            background: var(--bg-card);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px var(--shadow);
+        }
+
+        .section-title {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: var(--accent-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-content {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .section-content.collapsed {
+            display: none;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: var(--bg-secondary);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+
+        tr:hover {
+            background: var(--bg-secondary);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            margin: 2px;
+        }
+
+        .badge-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .badge-error {
+            background: var(--error-color);
+            color: white;
+        }
+
+        .badge-warning {
+            background: var(--warning-color);
+            color: white;
+        }
+
+        .badge-info {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .code-block {
+            background: var(--code-bg);
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin: 10px 0;
+        }
+
+        .vulnerability-alert {
+            background: var(--error-color);
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border-color);
+            border-radius: 5px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .filter-chips {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .chip {
+            padding: 8px 15px;
+            border-radius: 20px;
+            border: 2px solid var(--border-color);
+            background: var(--bg-secondary);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .chip.active {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        .chip:hover {
+            transform: translateY(-2px);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid var(--border-color);
+            border-top: 4px solid var(--accent-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .expand-icon {
+            transition: transform 0.3s;
+        }
+
+        .expand-icon.rotated {
+            transform: rotate(180deg);
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .controls {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+    </style>
+</head>
+<body data-theme="light">
+    <div class="container">
+        <header>
+            <h1>🔍 Sir Jimbet Red-Team Scan Results Viewer # <a target='_blank' href='https://github.com/jimbet/'>Sir Jimbet - GitHub</a></h1>
+            <div class="controls">
+                <div class="file-input-wrapper">
+                    <label for="fileInput" class="btn btn-primary">
+                        📁 Import JSON
+                    </label>
+                    <input type="file" id="fileInput" accept=".json" multiple>
+                </div>
+                <button class="theme-toggle" id="themeToggle" title="Toggle Theme">🌓</button>
+            </div>
+        </header>
+
+        <div id="content">
+            <div class="no-data">
+                <h2>No data loaded</h2>
+                <p>Please import a JSON scan result file</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let scanData = null;
+        let allScans = [];
+
+        // Theme toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        document.body.setAttribute('data-theme', currentTheme);
+
+        themeToggle.addEventListener('click', () => {
+            const theme = document.body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            document.body.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+        });
+
+        // File input handler
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            const files = e.target.files;
+            if (files.length > 0) {
+                allScans = [];
+                let loadedCount = 0;
+                
+                Array.from(files).forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        try {
+                            const data = JSON.parse(event.target.result);
+                            allScans.push(data);
+                            loadedCount++;
+                            
+                            if (loadedCount === files.length) {
+                                if (allScans.length === 1) {
+                                    scanData = allScans[0];
+                                    renderData(scanData);
+                                } else {
+                                    renderMultipleScans(allScans);
+                                }
+                            }
+                        } catch (error) {
+                            alert('Error parsing JSON: ' + error.message);
+                        }
+                    };
+                    reader.readAsText(file);
+                });
+            }
+        });
+
+        function renderMultipleScans(scans) {
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="section">
+                    <div class="section-title">
+                        <span>📊 Multiple Scans Loaded (${scans.length})</span>
+                    </div>
+                    <div class="section-content">
+                        <p style="margin-bottom: 15px;">Select a scan to view:</p>
+                        ${scans.map((scan, index) => `
+                            <div class="chip" onclick="selectScan(${index})" style="display: block; margin-bottom: 10px; cursor: pointer;">
+                                <strong>${scan.domain || 'Unknown Domain'}</strong> - ${scan.timestamp ? new Date(scan.timestamp).toLocaleString() : 'No timestamp'}
+                                <br>
+                                <small>${scan.statistics?.total_subdomains || 0} subdomains, ${scan.statistics?.total_unique_ips || 0} IPs</small>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function selectScan(index) {
+            scanData = allScans[index];
+            renderData(scanData);
+        }
+
+        function renderData(data) {
+            const content = document.getElementById('content');
+            
+            const stats = data.statistics || {};
+            const redTeam = data.red_team_results || {};
+            
+            content.innerHTML = `
+                ${renderOverview(data)}
+                ${renderStats(stats, redTeam)}
+                ${renderCriticalFindings(redTeam)}
+                ${renderDNSInfo(data.dns_info)}
+                ${renderSubdomains(data.subdomains, data.cname_map)}
+                ${renderHTTPProbes(redTeam.http_probes)}
+                ${renderOpenPorts(redTeam.open_ports)}
+                ${renderWAF(redTeam.waf_detected)}
+                ${renderSSLCerts(redTeam.ssl_certs)}
+                ${renderAPIEndpoints(redTeam.api_endpoints)}
+                ${renderCloudAssets(redTeam.cloud_assets)}
+                ${renderIPGeolocation(redTeam.ip_geolocation)}
+                ${renderChanges(redTeam.changes)}
+            `;
+
+            // Add click handlers for collapsible sections
+            document.querySelectorAll('.section-title').forEach(title => {
+                title.addEventListener('click', () => {
+                    const content = title.nextElementSibling;
+                    const icon = title.querySelector('.expand-icon');
+                    content.classList.toggle('collapsed');
+                    if (icon) icon.classList.toggle('rotated');
+                });
+            });
+        }
+
+        function renderOverview(data) {
+            return `
+                <div class="section">
+                    <div class="section-title">
+                        <span>📋 Scan Overview</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                    <div class="section-content">
+                        <div class="code-block">
+                            <strong>Domain:</strong> ${data.domain}<br>
+                            <strong>Timestamp:</strong> ${new Date(data.timestamp).toLocaleString()}<br>
+                            <strong>Scan Level:</strong> ${data.scan_level || 'N/A'}<br>
+                            <strong>Total Subdomains:</strong> ${data.statistics?.total_subdomains || 0}<br>
+                            <strong>Total Unique IPs:</strong> ${data.statistics?.total_unique_ips || 0}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderStats(stats, redTeam) {
+            return `
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Subdomains</div>
+                        <div class="stat-value">${stats.total_subdomains || 0}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Unique IPs</div>
+                        <div class="stat-value">${stats.total_unique_ips || 0}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">HTTP Services</div>
+                        <div class="stat-value">${stats.http_enabled || 0}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Open Ports</div>
+                        <div class="stat-value">${stats.open_ports_found || 0}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">WAF Detected</div>
+                        <div class="stat-value">${stats.waf_detected || 0}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">⚠️ Takeovers</div>
+                        <div class="stat-value" style="color: ${stats.takeover_vulnerabilities > 0 ? 'var(--error-color)' : 'var(--success-color)'}">
+                            ${stats.takeover_vulnerabilities || 0}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCriticalFindings(redTeam) {
+            const takeovers = redTeam.takeovers || [];
+            const cloudAssets = redTeam.cloud_assets || {};
+            const publicBuckets = (cloudAssets.s3_buckets || []).filter(b => b.public);
+
+            if (takeovers.length === 0 && publicBuckets.length === 0) {
+                return '';
+            }
+
+            return `
+                <div class="section">
+                    <div class="section-title">
+                        <span>⚠️ CRITICAL FINDINGS</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                    <div class="section-content">
+                        ${takeovers.map(t => `
+                            <div class="vulnerability-alert">
+                                <strong>SUBDOMAIN TAKEOVER DETECTED!</strong><br>
+                                Subdomain: ${t.subdomain}<br>
+                                CNAME: ${t.cname}<br>
+                                Service: ${t.service}<br>
+                                Confidence: ${t.confidence}<br>
+                                Evidence: ${t.evidence.join(', ')}
+                            </div>
+                        `).join('')}
+                        ${publicBuckets.map(b => `
+                            <div class="vulnerability-alert">
+                                <strong>PUBLIC S3 BUCKET!</strong><br>
+                                Bucket: ${b.bucket_name}<br>
+                                URL: ${b.url}<br>
+                                ${b.listable ? '<strong>⚠️ LISTABLE - Contents exposed!</strong>' : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderDNSInfo(dnsInfo) {
+            if (!dnsInfo) return '';
+
+            return `
+                <div class="section">
+                    <div class="section-title">
+                        <span>🌐 DNS Information</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                    <div class="section-content">
+                        <h3>A Records</h3>
+                        <div class="code-block">${(dnsInfo.a_records || []).join(', ') || 'None'}</div>
+                        
+                        <h3>NS Records</h3>
+                        <div class="code-block">${(dnsInfo.nameservers || []).join(', ') || 'None'}</div>
+                        
+                        <h3>MX Records</h3>
+                        <div class="code-block">
+                            ${(dnsInfo.mx_records || []).map(mx => `${mx.priority} ${mx.host}`).join('<br>') || 'None'}
+                        </div>
+                        
+                        <h3>TXT Records</h3>
+                        <div class="code-block">${(dnsInfo.txt_records || []).join('<br>') || 'None'}</div>
+                        
+                        ${dnsInfo.spf_record ? `<h3>SPF Record</h3><div class="code-block">${dnsInfo.spf_record}</div>` : ''}
+                        ${dnsInfo.dmarc_record ? `<h3>DMARC Record</h3><div class="code-block">${dnsInfo.dmarc_record}</div>` : ''}
+                        
+                        ${dnsInfo.soa_record ? `
+                            <h3>SOA Record</h3>
+                            <div class="code-block">
+                                Primary NS: ${dnsInfo.soa_record.mname}<br>
+                                Admin Email: ${dnsInfo.soa_record.rname}<br>
+                                Serial: ${dnsInfo.soa_record.serial}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderSubdomains(subdomains, cnameMap) {
+            if (!subdomains || Object.keys(subdomains).length === 0) {
+                return '<div class="section"><div class="no-data">No subdomains found</div></div>';
+            }
+
+            const entries = Object.entries(subdomains);
+            return `
+                <div class="section">
+                    <div class="section-title">
+                        <span>🔗 Subdomains (${entries.length})</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                    <div class="section-content">
+                        <input type="text" class="search-box" placeholder="Search subdomains..." onkeyup="filterTable(this, 'subdomainTable')">
+                        <div class="table-responsive">
+                            <table id="subdomainTable">
+                                <thead>
+                                    <tr>
+                                        <th>Subdomain</th>
+                                        <th>IP Addresses</th>
+                                        <th>CNAME</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${entries.map(([sub, ips]) => `
+                                        <tr>
+                                            <td><strong>${sub}</strong></td>
+                                            <td>${ips.map(ip => `<span class="badge badge-info">${ip}</span>`).join(' ')}</td>
+                                            <td>${cnameMap && cnameMap[sub] ? `<span class="badge badge-warning">${cnameMap[sub]}</span>` : '-'}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderHTTPProbes(probes) {
+            if (!probes || Object.keys(probes).length === 0) return '';
+
+            const entries = Object.entries(probes).filter(([_, data]) => data.https || data.http);
+            if (entries.length === 0) return '';
+
+            return `
+                <div class="section">
+                    <div class="section-title">
+                        <span>🌐 HTTP/HTTPS Services (${entries.length})</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                    <div class="section-content">
+                        <input type="text" class="search-box" placeholder="Search HTTP services..." onkeyup="filterTable(this, 'httpTable')">
+                        <div class="table-responsive">
+                            <table id="httpTable">
+                                <thead>
+                                    <tr>
+                                        <th>Subdomain</th>
+                                        <th>Protocol</th>
+                                        <th>Status</th>
+                                        <th>Title</th>
+                                        <th>Server</th>
+                                        <th>Technologies</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${entries.map(([sub, data]) => `
+                                        <tr>
+                                            <td><strong>${sub}</strong></td>
+                                            <td>
+                                                ${data.https ? '<span class="badge badge-success">HTTPS</span>' : ''}
+                                                ${data.http ? '<span class="badge badge-warning">HTTP</span>' : ''}
+                                            </td>
+                                            <td><span class="badge ${data.status_code === 200 ? 'badge-success' : 'badge-warning'}">${data.status_code || 'N/A'}</span></td>
+                                            <td>${data.title || 'N/A'}</td>
+                                            <td>${data.server || 'Unknown'}</td>
+                                            <td>${(data.technologies || []).map(t => `<span class="badge badge-info">${t}</span>`).join(' ')}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderOpenPorts(ports) {
+            if (!ports || Object.keys(ports).length === 0) return '';
+
+            return `
+                <div class="section">
+                    <div class="section-title">
+                        <span>🔓 Open Ports (${Object.keys(ports).length} hosts)</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                    <div class="section-content">
+                        <input type="text" class="search-box" placeholder="Search open ports..." onkeyup="filterTable(this, 'portsTable')">
+                        <div class="table-responsive">
+                            <table id="portsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Host</th>
+                                        <th>Port</th>
+                                        <th>Service</th>
+                                        <th>Banner</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${Object.entries(ports).flatMap(([host, portData]) => 
+                                        Object.entries(portData).map(([port, info]) => `
+                                            <tr>
+                                                <td><strong>${host}</strong></td>
+                                                <td><span class="badge badge-error">${port}</span></td>
+                                                <td><span class="badge badge-info">${info.service || 'Unknown'}</span></td>
+                                                <td style="font-family: monospace; font-size: 12px;">${info.banner || 'No banner'}</td>
+                                            </tr>
+                                        `)
+                                    ).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderWAF(waf) {
+            if (!waf || Object.keys(waf).length === 0) return '';
+
+            return `
+                <div class="section">
+                    <div class="section-title">
+                        <span>🛡️ WAF/CDN Detected (${Object.keys(waf).length})</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                    <div class="section-content">
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Subdomain</th>
+                                        <th>WAF/CDN</th>
+                                        <th>Evidence</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${Object.entries(waf).map(([sub, data]) => `
+                                        <tr>
+                                            <td><strong>${sub}</strong></td>
+                                            <td><span class="badge badge-warning">${data.waf_name || 'Unknown'}</span></td>
+                                            <td>${(data.evidence || []).join(', ')}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderSSLCerts(certs) {
+            if (!certs || Object.keys(certs).length === 0) return '';
+
+            const certsWithSSL = Object.entries(certs).filter(([_, data]) => data.has_ssl);
+            if (certsWithSSL.length === 0) return '';
+
+            return `
+                <div class="section">
+                    <div class="section-title">
+                        <span>🔐 SSL Certificates (${certsWithSSL.length})</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                    <div class="section-content">
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Hostname</th>
+                                        <th>Issuer</th>
+                                        <th>Subject</th>
+                                        <th>Expiry</th>
+                                        <th>Status</th>
+                                        <th>SANs</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${certsWithSSL.map(([host, data]) => `
+                                        <tr>
+                                            <td><strong>${host}</strong></td>
+                                            <td>${data.issuer || 'Unknown'}</td>
+                                            <td>${data.subject || 'Unknown'}</td>
+                                            <td>${data.expiry ? new Date(data.expiry).toLocaleDateString() : 'N/A'}</td>
+                                            <td>
+                                                ${data.expired ? '<span class="badge badge-error">EXPIRED</span>' : '<span class="badge badge-success">Valid</span>'}
+                                                ${data.self_signed ? '<span class="badge badge-warning">Self-Signed</span>' : ''}
+                                            </td>
+                                            <td><span class="badge badge-info">${(data.san_domains || []).length} domains</span></td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAPIEndpoints(apis) {
+            if (!apis || Object.keys(apis).length === 0) return '';
+
+            const totalEndpoints = Object.values(apis).reduce((sum, endpoints) => sum + endpoints.length, 0);
+            if (totalEndpoints === 0) return '';
+
+            return `
+                <div class="section">
+                    <div class="section-title">
+                        <span>🔌 API Endpoints (${totalEndpoints})</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                    <div class="section-content">
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Subdomain</th>
+                                        <th>Endpoint</th>
+                                        <th>Status</th>
+                                        <th>Content-Type</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${Object.entries(apis).flatMap(([sub, endpoints]) => 
+                                        endpoints.map(ep => `
+                                            <tr>
+                                                <td><strong>${sub}</strong></td>
+                                                <td style="font-family: monospace;">${ep.url}</td>
+                                                <td><span class="badge ${ep.status === 200 ? 'badge-success' : 'badge-warning'}">${ep.status}</span></td>
+                                                <td>${ep.content_type || 'N/A'}</td>
+                                            </tr>
+                                        `)
+                                    ).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCloudAssets(cloud) {
+            if (!cloud || ((!cloud.s3_buckets || cloud.s3_buckets.length === 0) && 
+                          (!cloud.azure_blobs || cloud.azure_blobs.length === 0))) return '';
+
+            return `
+                <div class="section">
+                    <div class="section-title">
+                        <span>☁️ Cloud Assets</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                    <div class="section-content">
+                        ${cloud.s3_buckets && cloud.s3_buckets.length > 0 ? `
+                            <h3>AWS S3 Buckets (${cloud.s3_buckets.length})</h3>
+                            <div class="table-responsive">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Bucket Name</th>
+                                            <th>URL</th>
+                                            <th>Access</th>
+                                            <th>Listable</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${cloud.s3_buckets.map(b => `
+                                            <tr>
+                                                <td><strong>${b.bucket_name}</strong></td>
+                                                <td><a href="${b.url}" target="_blank" style="color: var(--accent-color);">${b.url}</a></td>
+                                                <td>
+                                                    ${b.public ? 
+                                                        '<span class="badge badge-error">PUBLIC</span>' : 
+                                                        '<span class="badge badge-success">PRIVATE</span>'}
+                                                </td>
+                                                <td>
+                                                    ${b.listable ? 
+                                                        '<span class="badge badge-error">YES</span>' : 
+                                                        '<span class="badge badge-success">NO</span>'}
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : ''}
+                        
+                        ${cloud.azure_blobs && cloud.azure_blobs.length > 0 ? `
+                            <h3>Azure Blob Storage (${cloud.azure_blobs.length})</h3>
+                            <div class="table-responsive">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Blob Name</th>
+                                            <th>URL</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${cloud.azure_blobs.map(b => `
+                                            <tr>
+                                                <td><strong>${b.blob_name}</strong></td>
+                                                <td><a href="${b.url}" target="_blank" style="color: var(--accent-color);">${b.url}</a></td>
+                                                <td><span class="badge badge-info">${b.status}</span></td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderIPGeolocation(geo) {
+            if (!geo || Object.keys(geo).length === 0) return '';
+
+            return `
+                <div class="section">
+                    <div class="section-title">
+                        <span>🌍 IP Geolocation (${Object.keys(geo).length} IPs)</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                    <div class="section-content">
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>IP Address</th>
+                                        <th>Country</th>
+                                        <th>City</th>
+                                        <th>Organization</th>
+                                        <th>ASN</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${Object.entries(geo).map(([ip, data]) => `
+                                        <tr>
+                                            <td><strong>${ip}</strong></td>
+                                            <td>${data.country || 'Unknown'}</td>
+                                            <td>${data.city || 'Unknown'}</td>
+                                            <td>${data.org || 'Unknown'}</td>
+                                            <td>${data.asn || 'N/A'}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderChanges(changes) {
+            if (!changes) return '';
+
+            const hasChanges = (changes.new_subdomains && changes.new_subdomains.length > 0) ||
+                             (changes.removed_subdomains && changes.removed_subdomains.length > 0) ||
+                             (changes.ip_changes && changes.ip_changes.length > 0);
+
+            if (!hasChanges) return '';
+
+            return `
+                <div class="section">
+                    <div class="section-title">
+                        <span>📊 Changes Since Last Scan</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                    <div class="section-content">
+                        ${changes.new_subdomains && changes.new_subdomains.length > 0 ? `
+                            <h3 style="color: var(--success-color);">➕ New Subdomains (${changes.new_subdomains.length})</h3>
+                            <div class="code-block">
+                                ${changes.new_subdomains.join('<br>')}
+                            </div>
+                        ` : ''}
+                        
+                        ${changes.removed_subdomains && changes.removed_subdomains.length > 0 ? `
+                            <h3 style="color: var(--error-color);">➖ Removed Subdomains (${changes.removed_subdomains.length})</h3>
+                            <div class="code-block">
+                                ${changes.removed_subdomains.join('<br>')}
+                            </div>
+                        ` : ''}
+                        
+                        ${changes.ip_changes && changes.ip_changes.length > 0 ? `
+                            <h3 style="color: var(--warning-color);">🔄 IP Changes (${changes.ip_changes.length})</h3>
+                            <div class="table-responsive">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Subdomain</th>
+                                            <th>Old IPs</th>
+                                            <th>New IPs</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${changes.ip_changes.map(change => `
+                                            <tr>
+                                                <td><strong>${change.subdomain}</strong></td>
+                                                <td>${change.old_ips.join(', ')}</td>
+                                                <td>${change.new_ips.join(', ')}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function filterTable(input, tableId) {
+            const filter = input.value.toLowerCase();
+            const table = document.getElementById(tableId);
+            const rows = table.getElementsByTagName('tr');
+
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(filter) ? '' : 'none';
+            }
+        }
+    </script>
+</body>
+</html>
